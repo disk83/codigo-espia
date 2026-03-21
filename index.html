@@ -292,6 +292,11 @@
     const bigMessage = document.getElementById("bigMessage");
 
     let audioCtx = null;
+    const successAudio = new Audio("sounds/success.mp3");
+    const alarmAudio = new Audio("sounds/alarm.mp3");
+
+    successAudio.preload = "auto";
+    alarmAudio.preload = "auto";
 
     function normalizeCode(value) {
       return String(value || "").trim().toUpperCase();
@@ -344,7 +349,10 @@
     }
 
     function stopAllSoundsSoon() {
-      // no-op, cada sonido se autodestruye
+      [successAudio, alarmAudio].forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
     }
 
     function playTone(freq, start, duration, type = "sine", volume = 0.15) {
@@ -365,7 +373,7 @@
       osc.stop(start + duration + 0.02);
     }
 
-    function playIncorrectAlarm() {
+    function playSynthIncorrectAlarm() {
       const now = audioCtx.currentTime + 0.02;
       for (let i = 0; i < 6; i++) {
         const t = now + i * 0.22;
@@ -374,7 +382,7 @@
       }
     }
 
-    function playVictoryFanfare() {
+    function playSynthVictoryFanfare() {
       const now = audioCtx.currentTime + 0.02;
       const notes = [
         523.25, 659.25, 783.99, 1046.5,
@@ -386,6 +394,28 @@
       playTone(523.25, now + 1.05, 0.5, "triangle", 0.18);
       playTone(783.99, now + 1.05, 0.5, "triangle", 0.14);
       playTone(1046.5, now + 1.05, 0.7, "triangle", 0.16);
+    }
+
+    function playAudioWithFallback(audio, fallback) {
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          fallback();
+        });
+        return;
+      }
+
+      fallback();
+    }
+
+    function playIncorrectAlarm() {
+      playAudioWithFallback(alarmAudio, playSynthIncorrectAlarm);
+    }
+
+    function playVictoryFanfare() {
+      playAudioWithFallback(successAudio, playSynthVictoryFanfare);
     }
 
     clearBtn.addEventListener("click", () => {
