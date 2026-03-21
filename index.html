@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Secreto</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(255,255,255,0.08);
+      --text: #f4f7ff;
+      --muted: #b9c2e0;
+      --accent: #5eead4;
+      --danger: #ff2f2f;
+      --success: #4dff88;
+      --warning: #ffd54d;
+      --border: rgba(255,255,255,0.15);
+      --shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, #16213f 0%, #0b1020 50%, #05070f 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      overflow: hidden;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    body.mode-incorrect {
+      background:
+        radial-gradient(circle at center, #5a0000 0%, #2a0000 40%, #000000 100%);
+      animation: shakeScreen 0.18s linear 8, dangerPulse 0.4s linear infinite;
+    }
+
+    body.mode-correct {
+      background:
+        radial-gradient(circle at center, #0c3b12 0%, #0f5d22 45%, #031108 100%);
+      animation: successGlow 1.1s ease-in-out infinite;
+    }
+
+    @keyframes shakeScreen {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(-6px, 2px) rotate(-0.8deg); }
+      50% { transform: translate(7px, -2px) rotate(0.8deg); }
+      75% { transform: translate(-5px, -1px) rotate(-0.4deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+
+    @keyframes dangerPulse {
+      0%   { filter: brightness(1); }
+      50%  { filter: brightness(1.22); }
+      100% { filter: brightness(1); }
+    }
+
+    @keyframes successGlow {
+      0%   { filter: brightness(1); }
+      50%  { filter: brightness(1.14); }
+      100% { filter: brightness(1); }
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 560px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 22px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin: 0 0 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.4;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.25);
+      color: white;
+      font-size: 1.1rem;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #aab3d1;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-main {
+      background: linear-gradient(135deg, #5eead4, #3b82f6);
+      color: #04101e;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .status {
+      margin-top: 18px;
+      min-height: 72px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-size: 1.15rem;
+      line-height: 1.3;
+      font-weight: 700;
+    }
+
+    .status.neutral { color: #e8eeff; }
+    .status.error { color: #ffd5d5; background: rgba(255, 0, 0, 0.16); }
+    .status.success { color: #dbffe6; background: rgba(0, 255, 100, 0.14); }
+
+    .big-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .big-overlay.show {
+      display: flex;
+    }
+
+    .big-message {
+      font-size: clamp(2.4rem, 9vw, 7rem);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(255,255,255,0.18), 0 0 50px rgba(255,255,255,0.15);
+    }
+
+    .big-message.error {
+      color: #ffffff;
+      text-shadow:
+        0 0 18px rgba(255,0,0,0.8),
+        0 0 40px rgba(255,0,0,0.7),
+        0 0 80px rgba(255,0,0,0.5);
+      animation: blinkError 0.45s linear infinite;
+    }
+
+    .big-message.success {
+      color: #ffffff;
+      text-shadow:
+        0 0 18px rgba(50,255,120,0.7),
+        0 0 40px rgba(50,255,120,0.55),
+        0 0 80px rgba(255,215,0,0.35);
+      animation: zoomSuccess 1s ease-in-out infinite;
+    }
+
+    @keyframes blinkError {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(1.04); }
+    }
+
+    @keyframes zoomSuccess {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 18px; }
+      h1 { font-size: 1.7rem; }
+      .buttons { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="overlay" class="big-overlay" aria-hidden="true">
+    <div id="bigMessage" class="big-message">LISTO</div>
+  </div>
+
+  <main class="wrap">
+    <section class="card">
+      <h1>Panel Secreto</h1>
+      <p class="subtitle">
+        Introduce el código para desbloquear la misión.
+      </p>
+
+      <div class="row">
+        <div>
+          <label for="enteredCode">Introduce el código</label>
+          <input id="enteredCode" type="password" placeholder="Escribe aquí el código..." maxlength="30" />
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn-main" id="checkBtn">Comprobar código</button>
+        <button class="btn-secondary" id="clearBtn">Borrar</button>
+      </div>
+
+      <div id="status" class="status neutral">Esperando código...</div>
+      <div class="footer-note">Ideal para una gincana, misión secreta o puerta bloqueada.</div>
+    </section>
+  </main>
+
+  <script>
+    const SECRET_CODE = "ESPIA7";
+
+    const enteredCodeInput = document.getElementById("enteredCode");
+    const checkBtn = document.getElementById("checkBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusBox = document.getElementById("status");
+    const overlay = document.getElementById("overlay");
+    const bigMessage = document.getElementById("bigMessage");
+
+    let audioCtx = null;
+
+    function normalizeCode(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
+    function setNeutralState(message = "Esperando código...") {
+      document.body.classList.remove("mode-incorrect", "mode-correct");
+      overlay.classList.remove("show");
+      bigMessage.className = "big-message";
+      statusBox.className = "status neutral";
+      statusBox.textContent = message;
+    }
+
+    function setIncorrectState() {
+      document.body.classList.remove("mode-correct");
+      document.body.classList.add("mode-incorrect");
+      overlay.classList.add("show");
+      bigMessage.className = "big-message error";
+      bigMessage.textContent = "INCORRECTO";
+      statusBox.className = "status error";
+      statusBox.textContent = "❌ Código incorrecto. Acceso denegado.";
+
+      if (navigator.vibrate) {
+        navigator.vibrate([120, 60, 120, 60, 220]);
+      }
+    }
+
+    function setCorrectState() {
+      document.body.classList.remove("mode-incorrect");
+      document.body.classList.add("mode-correct");
+      overlay.classList.add("show");
+      bigMessage.className = "big-message success";
+      bigMessage.textContent = "CÓDIGO CORRECTO";
+      statusBox.className = "status success";
+      statusBox.textContent = "✅ Acceso concedido. ¡Misión desbloqueada!";
+
+      if (navigator.vibrate) {
+        navigator.vibrate([80, 40, 80, 40, 140]);
+      }
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        return audioCtx.resume();
+      }
+      return Promise.resolve();
+    }
+
+    function stopAllSoundsSoon() {
+      // no-op, cada sonido se autodestruye
+    }
+
+    function playTone(freq, start, duration, type = "sine", volume = 0.15) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(start);
+      osc.stop(start + duration + 0.02);
+    }
+
+    function playIncorrectAlarm() {
+      const now = audioCtx.currentTime + 0.02;
+      for (let i = 0; i < 6; i++) {
+        const t = now + i * 0.22;
+        playTone(880, t, 0.1, "sawtooth", 0.18);
+        playTone(440, t + 0.1, 0.1, "square", 0.14);
+      }
+    }
+
+    function playVictoryFanfare() {
+      const now = audioCtx.currentTime + 0.02;
+      const notes = [
+        523.25, 659.25, 783.99, 1046.5,
+        987.77, 1174.66, 1318.51
+      ];
+      notes.forEach((freq, i) => {
+        playTone(freq, now + i * 0.14, 0.24, "triangle", 0.16);
+      });
+      playTone(523.25, now + 1.05, 0.5, "triangle", 0.18);
+      playTone(783.99, now + 1.05, 0.5, "triangle", 0.14);
+      playTone(1046.5, now + 1.05, 0.7, "triangle", 0.16);
+    }
+
+    clearBtn.addEventListener("click", () => {
+      enteredCodeInput.value = "";
+      setNeutralState("Campo borrado.");
+      enteredCodeInput.focus();
+    });
+
+    checkBtn.addEventListener("click", async () => {
+      const entered = normalizeCode(enteredCodeInput.value);
+      const correct = normalizeCode(SECRET_CODE);
+
+      if (!entered) {
+        setNeutralState("Introduce un código antes de comprobar.");
+        return;
+      }
+
+      await ensureAudio();
+      stopAllSoundsSoon();
+
+      if (entered === correct) {
+        setCorrectState();
+        playVictoryFanfare();
+      } else {
+        setIncorrectState();
+        playIncorrectAlarm();
+      }
+    });
+
+    enteredCodeInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        checkBtn.click();
+      }
+    });
+
+    setNeutralState();
+  </script>
+</body>
+</html>
