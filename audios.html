@@ -85,6 +85,22 @@
       gap: 12px;
     }
 
+    .picker-box {
+      margin: 0 0 16px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      text-align: center;
+    }
+
+    .picker-text {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
     .audio-card {
       border-radius: 18px;
       padding: 14px;
@@ -130,15 +146,11 @@
       border: 1px solid rgba(255,255,255,0.14);
     }
 
-    .empty-state {
-      margin: 0;
-      padding: 16px;
-      border-radius: 18px;
-      text-align: center;
-      color: var(--muted);
-      background: rgba(255,255,255,0.05);
-      border: 1px dashed rgba(255,255,255,0.14);
-      line-height: 1.5;
+    .audio-error {
+      margin: 10px 0 0;
+      color: #ffd3d3;
+      font-size: 0.85rem;
+      line-height: 1.4;
     }
 
     @media (max-width: 480px) {
@@ -157,8 +169,16 @@
     <section class="card">
       <h1>Audios Espía Fantasma</h1>
       <p class="subtitle">
-        Reproduce, pausa o reinicia cualquiera de los 4 audios.
+        Reproduce, pausa o reinicia cada audio.
       </p>
+
+      <div class="picker-box">
+        <p class="picker-text">
+          Intento cargar los audios desde la carpeta <strong>audios espia fantasma</strong>. Si no aparecen, elige esa carpeta manualmente.
+        </p>
+        <button id="pickFolderBtn" class="btn-pause" type="button">Elegir carpeta</button>
+        <input id="folderInput" type="file" accept="audio/*" webkitdirectory multiple hidden />
+      </div>
 
       <div id="audioList" class="audio-list" aria-live="polite"></div>
     </section>
@@ -168,6 +188,8 @@
     const AUDIO_FOLDER = "audios espia fantasma/";
     const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a"];
     const audioList = document.getElementById("audioList");
+    const pickFolderBtn = document.getElementById("pickFolderBtn");
+    const folderInput = document.getElementById("folderInput");
     const activeAudios = [];
 
     function stopOtherAudios(currentAudio) {
@@ -183,8 +205,20 @@
       audio.currentTime = 0;
     }
 
-    function createAudioCard(src, index) {
-      const audio = new Audio(src);
+    function isAudioFile(fileName) {
+      return AUDIO_EXTENSIONS.some((extension) => fileName.toLowerCase().endsWith(extension));
+    }
+
+    function clearAudios() {
+      activeAudios.forEach((audio) => {
+        audio.pause();
+      });
+      activeAudios.length = 0;
+      audioList.innerHTML = "";
+    }
+
+    function createAudioCard(track, index) {
+      const audio = track.file ? new Audio(URL.createObjectURL(track.file)) : new Audio(track.src);
       audio.preload = "metadata";
       activeAudios.push(audio);
 
@@ -193,10 +227,15 @@
 
       const title = document.createElement("h2");
       title.className = "audio-title";
-      title.textContent = "Audio " + (index + 1);
+      title.textContent = track.label || ("Audio " + (index + 1));
 
       const actions = document.createElement("div");
       actions.className = "audio-actions";
+
+      const error = document.createElement("p");
+      error.className = "audio-error";
+      error.hidden = true;
+      error.textContent = "No se pudo cargar este audio.";
 
       const playBtn = document.createElement("button");
       playBtn.className = "btn-play";
@@ -204,7 +243,9 @@
       playBtn.textContent = "Play";
       playBtn.addEventListener("click", () => {
         stopOtherAudios(audio);
-        audio.play();
+        audio.play().catch(() => {
+          error.hidden = false;
+        });
       });
 
       const pauseBtn = document.createElement("button");
@@ -223,52 +264,96 @@
         stopAudio(audio);
       });
 
+      audio.addEventListener("canplaythrough", () => {
+        error.hidden = true;
+      });
+
+      audio.addEventListener("error", () => {
+        error.hidden = false;
+      });
+
       actions.append(playBtn, pauseBtn, stopBtn);
-      card.append(title, actions);
+      card.append(title, actions, error);
 
       return card;
     }
 
-    function setEmptyState() {
-      audioList.innerHTML = "";
-      const message = document.createElement("p");
-      message.className = "empty-state";
-      message.textContent = "No se encontraron audios en la carpeta \"audios espia fantasma\".";
-      audioList.appendChild(message);
+    function renderAudioTracks(tracks) {
+      clearAudios();
+
+      tracks.forEach((track, index) => {
+        audioList.appendChild(createAudioCard(track, index));
+      });
     }
 
-    async function loadAudioFiles() {
+    function buildTracksFromFileNames(fileNames) {
+      return fileNames
+        .filter(isAudioFile)
+        .slice(0, 4)
+        .map((fileName, index) => ({
+          label: "Audio " + (index + 1),
+          src: AUDIO_FOLDER + fileName
+        }));
+    }
+
+    function buildTracksFromFiles(files) {
+      return files
+        .filter((file) => isAudioFile(file.name))
+        .slice(0, 4)
+        .map((file, index) => ({
+          label: "Audio " + (index + 1),
+          file
+        }));
+    }
+
+    async function tryLoadFromFolder() {
       try {
         const response = await fetch(encodeURI(AUDIO_FOLDER));
         if (!response.ok) {
-          throw new Error("No se pudo abrir la carpeta de audios.");
+          return false;
         }
 
         const html = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
-        const fileLinks = Array.from(doc.querySelectorAll("a"))
+        const fileNames = Array.from(doc.querySelectorAll("a"))
           .map((link) => link.getAttribute("href") || "")
-          .filter((href) => AUDIO_EXTENSIONS.some((ext) => href.toLowerCase().endsWith(ext)))
-          .slice(0, 4);
+          .filter((href) => href && href !== "../");
 
-        if (!fileLinks.length) {
-          setEmptyState();
-          return;
+        const tracks = buildTracksFromFileNames(fileNames);
+        if (!tracks.length) {
+          return false;
         }
 
-        const folderUrl = new URL(AUDIO_FOLDER, window.location.href);
-
-        fileLinks.forEach((fileLink, index) => {
-          const resolvedSrc = new URL(fileLink, folderUrl).href;
-          audioList.appendChild(createAudioCard(resolvedSrc, index));
-        });
+        renderAudioTracks(tracks);
+        return true;
       } catch (error) {
-        setEmptyState();
+        return false;
       }
     }
 
-    loadAudioFiles();
+    function loadFromSelectedFolder() {
+      const files = Array.from(folderInput.files || []);
+      const tracks = buildTracksFromFiles(files);
+
+      if (!tracks.length) {
+        return;
+      }
+
+      renderAudioTracks(tracks);
+    }
+
+    pickFolderBtn.addEventListener("click", () => {
+      folderInput.click();
+    });
+
+    folderInput.addEventListener("change", loadFromSelectedFolder);
+
+    async function initAudios() {
+      await tryLoadFromFolder();
+    }
+
+    initAudios();
   </script>
 </body>
 </html>
