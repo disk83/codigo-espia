@@ -182,6 +182,30 @@
       font-weight: 700;
     }
 
+    .top-link {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .subtle-link {
+      color: rgba(244, 247, 255, 0.72);
+      font-size: 0.85rem;
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .subtle-link:hover,
+    .subtle-link:focus-visible {
+      color: #ffffff;
+      background: rgba(255,255,255,0.09);
+    }
+
+    
     .status.neutral { color: #e8eeff; }
     .status.error { color: #ffd5d5; background: rgba(255, 0, 0, 0.16); }
     .status.success { color: #dbffe6; background: rgba(0, 255, 100, 0.14); }
@@ -256,8 +280,12 @@
   <div id="overlay" class="big-overlay" aria-hidden="true">
     <div id="bigMessage" class="big-message">LISTO</div>
   </div>
-
+  
   <main class="wrap">
+    <div class="top-link">
+      <a class="subtle-link" href="audios.html">Audios</a>
+    </div>
+
     <section class="card">
       <h1>Panel Secreto</h1>
       <p class="subtitle">
