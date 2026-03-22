@@ -353,6 +353,12 @@
         audio.pause();
         audio.currentTime = 0;
       });
+      
+      if (audioCtx && audioCtx.state !== "closed") {
+        const currentAudioCtx = audioCtx;
+        audioCtx = null;
+        currentAudioCtx.close();
+      }
     }
 
     function playTone(freq, start, duration, type = "sine", volume = 0.15) {
@@ -419,6 +425,7 @@
     }
 
     clearBtn.addEventListener("click", () => {
+      stopAllSoundsSoon();
       enteredCodeInput.value = "";
       setNeutralState("Campo borrado.");
       enteredCodeInput.focus();
