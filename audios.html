@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audios Espía Fantasma</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(255,255,255,0.08);
+      --text: #f4f7ff;
+      --muted: #b9c2e0;
+      --accent: #5eead4;
+      --border: rgba(255,255,255,0.15);
+      --shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, #16213f 0%, #0b1020 50%, #05070f 100%);
+      padding: 18px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .top-link {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .subtle-link {
+      color: rgba(244, 247, 255, 0.72);
+      font-size: 0.85rem;
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .subtle-link:hover,
+    .subtle-link:focus-visible {
+      color: #ffffff;
+      background: rgba(255,255,255,0.09);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 22px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.9rem;
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin: 0 0 22px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.4;
+    }
+
+    .audio-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .audio-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .audio-title {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: #ffffff;
+    }
+
+    .audio-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, #5eead4, #3b82f6);
+      color: #04101e;
+    }
+
+    .btn-pause,
+    .btn-stop {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .empty-state {
+      margin: 0;
+      padding: 16px;
+      border-radius: 18px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,0.05);
+      border: 1px dashed rgba(255,255,255,0.14);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 18px; }
+      h1 { font-size: 1.6rem; }
+      .audio-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top-link">
+      <a class="subtle-link" href="index.html">Panel secreto</a>
+    </div>
+
+    <section class="card">
+      <h1>Audios Espía Fantasma</h1>
+      <p class="subtitle">
+        Reproduce, pausa o reinicia cualquiera de los 4 audios.
+      </p>
+
+      <div id="audioList" class="audio-list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    const AUDIO_FOLDER = "audios espia fantasma/";
+    const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a"];
+    const audioList = document.getElementById("audioList");
+    const activeAudios = [];
+
+    function stopOtherAudios(currentAudio) {
+      activeAudios.forEach((audio) => {
+        if (audio !== currentAudio) {
+          audio.pause();
+        }
+      });
+    }
+
+    function stopAudio(audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    function createAudioCard(src, index) {
+      const audio = new Audio(src);
+      audio.preload = "metadata";
+      activeAudios.push(audio);
+
+      const card = document.createElement("article");
+      card.className = "audio-card";
+
+      const title = document.createElement("h2");
+      title.className = "audio-title";
+      title.textContent = "Audio " + (index + 1);
+
+      const actions = document.createElement("div");
+      actions.className = "audio-actions";
+
+      const playBtn = document.createElement("button");
+      playBtn.className = "btn-play";
+      playBtn.type = "button";
+      playBtn.textContent = "Play";
+      playBtn.addEventListener("click", () => {
+        stopOtherAudios(audio);
+        audio.play();
+      });
+
+      const pauseBtn = document.createElement("button");
+      pauseBtn.className = "btn-pause";
+      pauseBtn.type = "button";
+      pauseBtn.textContent = "Pause";
+      pauseBtn.addEventListener("click", () => {
+        audio.pause();
+      });
+
+      const stopBtn = document.createElement("button");
+      stopBtn.className = "btn-stop";
+      stopBtn.type = "button";
+      stopBtn.textContent = "Stop";
+      stopBtn.addEventListener("click", () => {
+        stopAudio(audio);
+      });
+
+      actions.append(playBtn, pauseBtn, stopBtn);
+      card.append(title, actions);
+
+      return card;
+    }
+
+    function setEmptyState() {
+      audioList.innerHTML = "";
+      const message = document.createElement("p");
+      message.className = "empty-state";
+      message.textContent = "No se encontraron audios en la carpeta \"audios espia fantasma\".";
+      audioList.appendChild(message);
+    }
+
+    async function loadAudioFiles() {
+      try {
+        const response = await fetch(encodeURI(AUDIO_FOLDER));
+        if (!response.ok) {
+          throw new Error("No se pudo abrir la carpeta de audios.");
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const fileLinks = Array.from(doc.querySelectorAll("a"))
+          .map((link) => link.getAttribute("href") || "")
+          .filter((href) => AUDIO_EXTENSIONS.some((ext) => href.toLowerCase().endsWith(ext)))
+          .slice(0, 4);
+
+        if (!fileLinks.length) {
+          setEmptyState();
+          return;
+        }
+
+        const folderUrl = new URL(AUDIO_FOLDER, window.location.href);
+
+        fileLinks.forEach((fileLink, index) => {
+          const resolvedSrc = new URL(fileLink, folderUrl).href;
+          audioList.appendChild(createAudioCard(resolvedSrc, index));
+        });
+      } catch (error) {
+        setEmptyState();
+      }
+    }
+
+    loadAudioFiles();
+  </script>
+</body>
+</html>
